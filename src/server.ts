@@ -1,10 +1,7 @@
-import express from 'express';
+import { app } from './config/expressConfig';
 
-const app = express();
 const PORTA = 3333;
 
-app.use(express.json());
-
 app.listen(PORTA, () => {
-  console.log(`Servidor rodando na porta ${PORTA}`);
-})
+  console.log('🚀 Servidor rodando na porta ${PORTA}');
+});
