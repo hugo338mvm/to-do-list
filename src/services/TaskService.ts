@@ -1,61 +1,46 @@
-import { randomUUID } from 'node:crypto';
-import { Task } from '../models/Task';
-
-// Em memória — os dados somem quando o servidor reinicia (esperado nesta semana)
-const tasks: Task[] = [];
-
-interface ICreateTask {
-  title: string;
-}
-
-interface IUpdateTask {
-  title?: string;
-  completed?: boolean;
-}
+import { prisma } from '../config/prismaClient';
+import { Prisma } from '../../generated/prisma/client';
 
 class TaskService {
-  create({ title }: ICreateTask): Task {
+  async create(title: string) {
     if (!title) {
       throw new Error('O título é obrigatório');
     }
-
-    const newTask: Task = {
-      id: randomUUID(),
-      title,
-      completed: false,
-    };
-
-    tasks.push(newTask);
-    return newTask;
+    return prisma.task.create({ data: { title } });
   }
 
-  list(completed?: boolean): Task[] {
+  async getAll(completed?: boolean) {
     if (completed === undefined) {
-      return tasks;
+      return prisma.task.findMany();
     }
-    return tasks.filter((task) => task.completed === completed);
+    return prisma.task.findMany({ where: { completed } });
   }
 
-  findById(id: string): Task | undefined {
-    return tasks.find((task) => task.id === id);
+  async getById(id: number) {
+    return prisma.task.findUnique({ where: { id } });
   }
 
-  update(id: string, data: IUpdateTask): Task | null {
-    const task = tasks.find((task) => task.id === id);
-    if (!task) return null;
-
-    if (data.title !== undefined) task.title = data.title;
-    if (data.completed !== undefined) task.completed = data.completed;
-
-    return task;
+  async update(id: number, data: { title?: string; completed?: boolean }) {
+    try {
+      return await prisma.task.update({ where: { id }, data });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
   }
 
-  delete(id: string): boolean {
-    const index = tasks.findIndex((task) => task.id === id);
-    if (index === -1) return false;
-
-    tasks.splice(index, 1);
-    return true;
+  async delete(id: number) {
+    try {
+      await prisma.task.delete({ where: { id } });
+      return true;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return false;
+      }
+      throw error;
+    }
   }
 }
 
